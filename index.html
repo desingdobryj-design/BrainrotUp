@@ -6,9 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: 'Press Start 2P', monospace;
       background: linear-gradient(to bottom, #f5f5dc, #ffffff);
@@ -18,9 +16,7 @@
       margin: 0 auto;
       overflow-x: hidden;
     }
-    h1, h2, h3 {
-      margin: 10px 0;
-    }
+    h1, h2, h3 { margin: 10px 0; }
     button, input, select {
       margin: 10px;
       padding: 10px;
@@ -53,7 +49,7 @@
       color: #666;
       margin-bottom: 10px;
     }
-    #upgrade-block, #inventory-block, #mix-block {
+    #upgrade-block, #inventory-block, #mix-block, #admin-panel {
       margin-top: 30px;
       padding: 15px;
       background: #fef6e4;
@@ -84,6 +80,13 @@
       background: #fff8e1;
       border: 2px solid #d4c4a4;
     }
+    #captcha-block {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: #ffe0e0;
+      border: 2px solid #cc4444;
+    }
   </style>
 </head>
 <body>
@@ -105,6 +108,13 @@
 
   <div id="mutation-text">МУТАЦИЯ!</div>
   <div id="success-text">✅ УСПЕШНО</div>
+
+  <div id="captcha-block">
+    <h3>🧠 Подтвердите, что вы не бот</h3>
+    <p>Введите код: <span id="captcha-code"></span></p>
+    <input type="text" id="captcha-input" placeholder="Введите цифры">
+    <button onclick="checkCaptcha()">Проверить</button>
+  </div>
   <div id="inventory-block">
     <h2>🎒 Инвентарь</h2>
     <div id="inventory-list"></div>
@@ -149,38 +159,27 @@
       <div id="mix-result" style="margin-top:10px;"></div>
     </div>
   </div>
-  <script>
-const brainrots = [
-  { name: "Br Br Patapim", power: 1 },
-  { name: "Ta Ta Ta Sahur", power: 2, cost: 20, chance: 85 },
-  { name: "Bandito Bobrito", power: 3, cost: 100, chance: 70 },
-  { name: "Tripi Tropi", power: 5, cost: 220, chance: 60 },
-  { name: "Frigo Camelo", power: 8, cost: 400, chance: 50 },
-  { name: "Tralalelo Tralala", power: 13, cost: 650, chance: 40 },
-  { name: "Barelina Capuchina", power: 21, cost: 1000, chance: 30 },
-  { name: "Orcalelo Orcala", power: 34, cost: 1500, chance: 20 },
-  { name: "Zombrot Ziggurat", power: 55, cost: 2200, chance: 15 },
-  { name: "Memelord Munchkin", power: 89, cost: 3000, chance: 10 },
-  { name: "Cryptoblob Crasher", power: 144, cost: 4200, chance: 7 },
-  { name: "Finalrot Omega", power: 233, cost: 6000, chance: 4 },
-  { name: "Neurogeist Prime", power: 377, cost: 8500, chance: 3 },
-  { name: "Rotzilla Supreme", power: 610, cost: 12000, chance: 2 },
-  { name: "Brainfinity Ascendant", power: 987, cost: 18000, chance: 1 }
-];
 
-const mixRecipes = {
-  "Tripi Tropi|Frigo Camelo": { name: "Fusionrot Echo", power: 20 },
-  "Zombrot Ziggurat|Memelord Munchkin": { name: "Glitchrot Phantom", power: 100 },
-  "Finalrot Omega|Neurogeist Prime": { name: "Overbrain Entity", power: 500 },
-  "Cryptoblob Crasher|Rotzilla Supreme": { name: "Blobzilla Reactor", power: 750 },
-  "Brainfinity Ascendant|Fusionrot Echo": { name: "Ascendrot Infinity", power: 1200 }
-};
+  <div id="admin-access">
+    <h2>🔐 Админ-доступ</h2>
+    <input type="password" id="admin-pass" placeholder="Введите пароль">
+    <button onclick="checkAdmin()">Войти</button>
+  </div>
 
+  <div id="admin-panel" style="display:none;">
+    <h3>🛠️ Панель администратора</h3>
+    <button onclick="spawnBoost()">Спавнить Boost</button><br>
+    <input type="number" id="give-coins" placeholder="Выдать монеты">
+    <button onclick="giveCoins()">Выдать</button>
+                                                                                </div>
+      <script>
 let coins = parseInt(localStorage.getItem('brCoins')) || 0;
 let currentIndex = parseInt(localStorage.getItem('brIndex')) || 0;
 let inventory = JSON.parse(localStorage.getItem('brInventory')) || [];
 let boostActive = false;
 let boostCountdown = 120;
+let clickCount = 0;
+let captchaCode = "";
 
 function updateStats() {
   document.getElementById('coins').textContent = coins;
@@ -205,8 +204,34 @@ function updateUpgradeInfo() {
 }
 
 function clickBrainrot() {
+  if (document.getElementById('captcha-block').style.display === 'block') return;
+
+  clickCount++;
+  if (clickCount % 20 === 0) {
+    showCaptcha();
+    return;
+  }
+
   coins += brainrots[currentIndex].power;
   updateStats();
+}
+
+function showCaptcha() {
+  captchaCode = Math.floor(100 + Math.random() * 900).toString();
+  document.getElementById('captcha-code').textContent = captchaCode;
+  document.getElementById('captcha-input').value = "";
+  document.getElementById('captcha-block').style.display = 'block';
+}
+
+function checkCaptcha() {
+  const input = document.getElementById('captcha-input').value.trim();
+  if (input === captchaCode) {
+    document.getElementById('captcha-block').style.display = 'none';
+    coins += brainrots[currentIndex].power;
+    updateStats();
+  } else {
+    alert("Неверный код. Попробуйте снова.");
+  }
 }
 
 function tryUpgrade() {
@@ -263,9 +288,37 @@ function startBoostCycle() {
   }, 1000);
 }
 
+function checkAdmin() {
+  const pass = document.getElementById('admin-pass').value;
+  if (pass === "Brainrot777") {
+    document.getElementById('admin-panel').style.display = 'block';
+  } else {
+    alert("Неверный пароль");
+  }
+}
+
+function spawnBoost() {
+  boostActive = true;
+  document.getElementById('boost-banner').style.display = 'block';
+  updateUpgradeInfo();
+  setTimeout(() => {
+    boostActive = false;
+    document.getElementById('boost-banner').style.display = 'none';
+    updateUpgradeInfo();
+  }, 20000);
+}
+
+function giveCoins() {
+  const amount = parseInt(document.getElementById('give-coins').value);
+  if (!isNaN(amount)) {
+    coins += amount;
+    updateStats();
+  }
+}
+
 updateStats();
 startBoostCycle();
-    function storeToInventory() {
+function storeToInventory() {
   const current = brainrots[currentIndex];
   inventory.push(current);
   currentIndex = 0;
