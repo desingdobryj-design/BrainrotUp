@@ -33,7 +33,28 @@
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
-    #captcha-overlay {
+    #click-button {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      font-size: 32px;
+      background-color: #ffb703;
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+    }
+    #click-button:hover {
+      background-color: #fb8500;
+      transform: scale(1.05);
+    }
+    #boost-banner {
+      font-weight: bold;
+      color: #ff8800;
+      margin-top: 10px;
+      display: none;
+    }
+    #captcha-overlay, #upgrade-overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
@@ -43,13 +64,12 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      font-size: 24px;
+      font-size: 28px;
     }
-    #boost-banner {
-      font-weight: bold;
-      color: #ff8800;
-      margin-top: 10px;
-      display: none;
+    #upgrade-overlay button {
+      margin-top: 20px;
+      font-size: 20px;
+      background-color: #0077b6;
     }
     #recipe-table {
       display: none;
@@ -76,10 +96,14 @@
   <h3>Сила: <span id="power">1</span> коин/клик</h3>
   <h3>Монеты: <span id="coins">0</span></h3>
 
-  <button onclick="clickBrainrot()">👆 Клик!</button>
+  <button id="click-button" onclick="clickBrainrot()">👆</button>
   <div id="boost-banner">⚡ BOOST ACTIVE!</div>
   <div id="boost-timer">Следующий Boost через: <span id="boost-countdown">120</span> сек</div>
 
+  <div id="upgrade-overlay">
+    <div id="upgrade-message">УЛУЧШЕНИЕ УДАЛОСЬ ✅</div>
+    <button onclick="closeUpgradeOverlay()">ОК</button>
+  </div>
   <div class="block">
     <h2>🔁 Улучшение</h2>
     <div id="upgrade-info"></div>
@@ -142,13 +166,6 @@
     <input type="text" id="captcha-input" maxlength="3">
     <button onclick="checkCaptcha()">Проверить</button>
   </div>
-
-  <script>
-    // 🧼 Очистка Local Storage при первом запуске
-    localStorage.removeItem('brCoins');
-    localStorage.removeItem('brIndex');
-    localStorage.removeItem('brInventory');
-  </script>
   <script>
 const brainrots = [
   { name: "Br Br Patapim", power: 1, cost: 0, chance: 100 },
@@ -159,10 +176,6 @@ const brainrots = [
   { name: "Barelina Capuchina", power: 15, cost: 850, chance: 40 },
   { name: "Bombini Gusini", power: 25, cost: 1200, chance: 25 }
 ];
-
-const mixRecipes = {
-  "Tralalelo Tralala|Tung Tung Sahur": { name: "Tungtralelitos", power: 18, cost: 500 }
-};
 
 let coins = 0;
 let currentIndex = 0;
@@ -177,6 +190,11 @@ function updateStats() {
   document.getElementById('coins').textContent = coins;
   document.getElementById('power').textContent = brainrots[currentIndex].power;
   document.getElementById('brainrot-name').textContent = brainrots[currentIndex].name;
+
+  localStorage.setItem('brCoins', coins);
+  localStorage.setItem('brIndex', currentIndex);
+  localStorage.setItem('brInventory', JSON.stringify(inventory));
+
   updateUpgradeInfo();
   updateInventoryUI();
 }
@@ -224,8 +242,23 @@ function tryUpgrade() {
   if (coins < next.cost) return;
   coins -= next.cost;
   let chance = next.chance + (boostActive ? 5 : 0);
-  if (Math.random() * 100 <= chance) currentIndex++;
+  const success = Math.random() * 100 <= chance;
+  if (success) {
+    currentIndex++;
+    showUpgradeOverlay("УЛУЧШЕНИЕ УДАЛОСЬ ✅");
+  } else {
+    showUpgradeOverlay("УЛУЧШЕНИЕ НЕ УДАЛОСЬ");
+  }
   updateStats();
+}
+
+function showUpgradeOverlay(message) {
+  document.getElementById('upgrade-message').textContent = message;
+  document.getElementById('upgrade-overlay').style.display = 'flex';
+}
+
+function closeUpgradeOverlay() {
+  document.getElementById('upgrade-overlay').style.display = 'none';
 }
 
 function storeToInventory() {
@@ -253,11 +286,18 @@ function startBoostCycle() {
 }
 
 window.onload = () => {
+  coins = parseInt(localStorage.getItem('brCoins')) || 0;
+  currentIndex = parseInt(localStorage.getItem('brIndex')) || 0;
+  inventory = JSON.parse(localStorage.getItem('brInventory')) || [];
   updateStats();
   startBoostCycle();
 };
 </script>
 <script>
+const mixRecipes = {
+  "Tralalelo Tralala|Tung Tung Sahur": { name: "Tungtralelitos", power: 18, cost: 500 }
+};
+
 function updateInventoryUI() {
   const list = document.getElementById('inventory-list');
   const select = document.getElementById('equip-select');
@@ -318,8 +358,7 @@ function toggleRecipeTable() {
   const table = document.getElementById('recipe-table');
   table.style.display = table.style.display === 'none' ? 'block' : 'none';
 }
-</script>
-<script>
+
 function checkAdmin() {
   const pass = document.getElementById('admin-pass').value;
   if (pass === "Brainrot777") {
@@ -349,4 +388,4 @@ function spawnBoost() {
 }
 </script>
 </body>
-      </html>
+  </html>
